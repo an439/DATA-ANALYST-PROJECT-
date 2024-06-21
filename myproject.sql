@@ -1,73 +1,4 @@
-SELECT gender,AVG(age),max(age),count(age)
-FROM employee_demographics
-GROUP BY gender;
-
-
-SELECT *
-FROM employee_demographics
-JOIN employee_salary;
-
-SELECT dem.employee_id,age
-FROM employee_demographics AS dem
-INNER JOIN employee_salary AS sal
-      ON dem.employee_id=sal.employee_id;
-      
-      
-      SELECT first_name,last_name
-      FROM employee_demographics
-      UNION 
-      SELECT first_name,last_name
-      
-	  SELECT  first_name,last_name, 'old man' as Lable
-      FROM employee_demographics
-      WHERE age>40 and gender= 'Male'
-      UNION
-      SELECT first_name,last_name, 'old lady' as Lable
-      FROM employee_demographics
-      WHERE age>40 and gender= 'Female'
-      UNION
-      SELECT first_name,last_name, 'high paid' as Lable
-      FROM employee_salary
-      WHERE salary>40000
-      ;
-      
-      -- STRING FUNCTIONS
-      
-      SELECT first_name,upper(first_name)
-      FROM employee_demographics;
-      
-      SELECT first_name,LENGTH(first_name)
-      FROM employee_demographics;
-      
-      -- CASE STATEMENT
-      
-      SELECT first_name,
-      last_name,
-      age,
-      CASE
-           WHEN age BETWEEN 30 and 50 THEN 'OLD'
-           WHEN age<=30 THEN 'Young'
-      END AS Age_Bracket
-      FROM employee_demographics;
-      
-      
-      
-      
-      
-      
-      SELECT dem.employee_id, dem.first_name,dem.last_name,avg(salary) OVER(PARTITION BY gender),
-      SUM(salary) OVER(PARTITION BY gender ORDER BY dem.employee_id) AS Rolling_total,
-      ROW_NUMBER() OVER(PARTITION BY gender)
-      FROM employee_demographics dem
-      JOIN employee_salary  sal
-           ON dem.employee_id=sal.employee_id;
-           
-           
-           
-           
-           
-           
-        -- Data Cleaning Project  
+ -- Data Cleaning Project  
         
 SELECT * 
 FROM layoffs;
@@ -197,20 +128,102 @@ ORDER BY 1 ;
           AND t2.industry IS NOT NULL;
       
       
-    -- REMOVING UNNECESSARY COLUMN 
-    
-	 DELETE
-     FROM layoffs_staging2
-     WHERE total_laid_off IS NULL
-     AND percentage_laid_off IS NULL;
-     
-    SELECT *
-   FROM layoffs_staging2
-	WHERE total_laid_off IS NULL
-     AND percentage_laid_off IS NULL;
+    -- and if we check it looks like Bally's was the only one without a populated row to populate this null values
+SELECT *
+FROM world_layoffs.layoffs_staging2
+WHERE industry IS NULL 
+OR industry = ''
+ORDER BY industry;
+
+-- ---------------------------------------------------
+
+-- I also noticed the Crypto has multiple different variations. We need to standardize that - let's say all to Crypto
+SELECT DISTINCT industry
+FROM world_layoffs.layoffs_staging2
+ORDER BY industry;
+
+UPDATE layoffs_staging2
+SET industry = 'Crypto'
+WHERE industry IN ('Crypto Currency', 'CryptoCurrency');
+
+-- now that's taken care of:
+SELECT DISTINCT industry
+FROM world_layoffs.layoffs_staging2
+ORDER BY industry;
+
+-- --------------------------------------------------
+-- we also need to look at 
+
+SELECT *
+FROM world_layoffs.layoffs_staging2;
+
+-- everything looks good except apparently we have some "United States" and some "United States." with a period at the end. Let's standardize this.
+SELECT DISTINCT country
+FROM world_layoffs.layoffs_staging2
+ORDER BY country;
+
+UPDATE layoffs_staging2
+SET country = TRIM(TRAILING '.' FROM country);
+
+-- now if we run this again it is fixed
+SELECT DISTINCT country
+FROM world_layoffs.layoffs_staging2
+ORDER BY country;
+
+
+-- Let's also fix the date columns:
+SELECT *
+FROM world_layoffs.layoffs_staging2;
+
+-- we can use str to date to update this field
+UPDATE layoffs_staging2
+SET `date` = STR_TO_DATE(`date`, '%m/%d/%Y');
+
+-- now we can convert the data type properly
+ALTER TABLE layoffs_staging2
+MODIFY COLUMN `date` DATE;
+
+
+SELECT *
+FROM world_layoffs.layoffs_staging2;
+
+
+
+
+
+-- 3. Look at Null Values
+
+-- the null values in total_laid_off, percentage_laid_off, and funds_raised_millions all look normal. I don't think I want to change that
+-- I like having them null because it makes it easier for calculations during the EDA phase
+
+-- so there isn't anything I want to change with the null values
+
+
+
+
+-- 4. remove any columns and rows we need to
+
+SELECT *
+FROM world_layoffs.layoffs_staging2
+WHERE total_laid_off IS NULL;
+
+
+SELECT *
+FROM world_layoffs.layoffs_staging2
+WHERE total_laid_off IS NULL
+AND percentage_laid_off IS NULL;
+
+-- Delete Useless data we can't really use
+DELETE FROM world_layoffs.layoffs_staging2
+WHERE total_laid_off IS NULL
+AND percentage_laid_off IS NULL;
+
+SELECT * 
+FROM world_layoffs.layoffs_staging2;
 
 ALTER TABLE layoffs_staging2
 DROP COLUMN row_num;
 
-SELECT *
-FROM layoffs_staging2;
+
+SELECT * 
+FROM world_layoffs.layoffs_staging2;
